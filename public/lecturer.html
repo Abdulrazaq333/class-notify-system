@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Lecturer Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h2>Lecturer Dashboard</h2>
+    <button class="logout" onclick="logout()">Logout</button>
+  </header>
+  <main>
+    <div class="container">
+      <h3>Post Notification</h3>
+      <textarea id="notificationText" placeholder="Enter notification..."></textarea>
+      <button onclick="post('notification')">Post Notification</button>
+
+      <h3>Post Assignment</h3>
+      <textarea id="assignmentText" placeholder="Enter assignment..."></textarea>
+      <button onclick="post('assignment')">Post Assignment</button>
+
+      <h3>All Notifications</h3>
+      <div id="notifications"></div>
+
+      <h3>All Assignments</h3>
+      <div id="assignments"></div>
+    </div>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'login.html';
+
+    const socket = io();
+
+    async function post(type) {
+      const content = document.getElementById(type + 'Text').value;
+      const res = await fetch(`/post-${type}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ content })
+      });
+      if (res.ok) {
+        document.getElementById(type + 'Text').value = '';
+        loadData();
+        socket.emit('newData');
+      } else {
+        alert("Error posting " + type);
+      }
+    }
+
+    async function del(id, type) {
+      const res = await fetch(`/delete-${type}/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        loadData();
+        socket.emit('newData');
+      }
+    }
+
+    async function loadData() {
+      const res = await fetch('/student-data', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      document.getElementById('notifications').innerHTML =
+        data.notifications.map(n =>
+          `<div class="card">${n.content} 
+            <button onclick="del(${n.id}, 'notification')">Delete</button>
+          </div>`).join('');
+      document.getElementById('assignments').innerHTML =
+        data.assignments.map(a =>
+          `<div class="card">${a.content} 
+            <button onclick="del(${a.id}, 'assignment')">Delete</button>
+          </div>`).join('');
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = 'login.html';
+    }
+
+    socket.on('newData', loadData);
+    loadData();
+  </script>
+</body>
+</html>

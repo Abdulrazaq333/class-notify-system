@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h2>Student Dashboard</h2>
+    <button class="logout" onclick="logout()">Logout</button>
+  </header>
+  <main>
+    <div class="container">
+      <h3>Class Notifications</h3>
+      <div id="notifications"></div>
+
+      <h3>Assignments</h3>
+      <div id="assignments"></div>
+    </div>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = 'login.html';
+
+    const socket = io();
+    socket.on('newData', loadData);
+
+    async function loadData() {
+      const res = await fetch('/student-data', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      document.getElementById('notifications').innerHTML =
+        data.notifications.map(n => `<div class="card">${n.content}</div>`).join('');
+      document.getElementById('assignments').innerHTML =
+        data.assignments.map(a => `<div class="card">${a.content}</div>`).join('');
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = 'login.html';
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
