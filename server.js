@@ -1,21 +1,27 @@
 // server.js
+require('dotenv').config(); // Load environment variables (if using .env)
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('./db');
+const db = require('./db'); // Make sure db.js uses process.env
 const verifyToken = require('./auth');
+
 const app = express();
 const server = http.createServer(app);
-const io = require('socket.io')(server);
+const io = require('socket.io')(server, {
+  cors: {
+    origin: "*",
+  }
+});
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Real-time with Socket.IO
+// Real-time Socket.IO
 io.on('connection', (socket) => {
   console.log('✅ Socket connected');
   socket.on('newData', () => {
@@ -56,7 +62,7 @@ app.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       { id: rows[0].id, role: rows[0].role },
-      'secret123',
+      process.env.JWT_SECRET || 'secret123', // Use env secret or fallback
       { expiresIn: '1h' }
     );
 
@@ -139,6 +145,7 @@ app.use((req, res) => {
 });
 
 // Start server
-server.listen(3000, () => {
-  console.log('🚀 Server running at http://localhost:3000');
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
